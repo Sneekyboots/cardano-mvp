@@ -1,0 +1,14 @@
+name = "yield-safe/contracts"
+version = "1.0.0"
+license = "MIT"
+description = "Impermanent Loss Protection Smart Contracts"
+
+[repository]
+user = "yield-safe"
+project = "contracts"
+platform = "github"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "1.7.0"
+source = "github"

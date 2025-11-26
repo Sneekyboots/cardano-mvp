@@ -1,0 +1,239 @@
+{
+  "preamble": {
+    "title": "yield-safe/contracts",
+    "description": "Impermanent Loss Protection Smart Contracts",
+    "version": "1.0.0",
+    "plutusVersion": "v2",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.0.24-alpha+982eff4"
+    },
+    "license": "MIT"
+  },
+  "validators": [
+    {
+      "title": "vault.vault_validator",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/yield_safe~1types~1VaultDatum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/vault~1VaultRedeemer"
+        }
+      },
+      "compiledCode": "59060e01000032323232323232323222232323253330093232533300b3370e90011805000899191919299980799b8748000c0380044c8c8c94ccc048cdc3a4000602200226464646464646464646464646464646464646464a66604c66e1d20000021323232323232533302c533302c009100414a020022940cdc380099b8000200433300537566042605002e6eb8c074c0a0044dd7181098140089998021bab3020302730203027019375c6038604e0206eb8c080c09c040cdc4240000026eb4c0b0004c09008854ccc098cdc3a40040042646464646464646464a66605ea66605ea66605e018200a2940401052808008a503370e00266e0400801cccc020dd59812181580d1bae3020302b014375c6048605602866600e6eacc08cc0a8c08cc0a8070dd7180f98150099bae3023302a013533302b00914a2266e240080314ccc0a8cdc424000006266e2400c03c5281bad302e001302e002375a605800260480442a66604c66e1d2004002132323232533302a533302a007100214a020022940cdd7981018139810181380c9810181380b29998142999814299981419b8948000dd6980d9813000899b89375a6036604c00290504e008a5013371090001bad301b3026301f302600114a0266e212000375a603e604c603e604c0022940c0b0004c0900884c94ccc09d4ccc09c0104014528099b88480000045281998009bab301d3024301d3024016375c6032604801a6eb8c074c090034888c8c8c94ccc0accdc3a40040022900009bad30303029002302900132533302a3370e90010008a6103d87a8000132323300100100222533303000114c103d87a800013232323253330313371e014004266e95200033035375000297ae0133006006003375a60640066eb8c0c0008c0d0008c0c8004dd598179814001181400099198008008021129998168008a6103d87a8000132323232533302e3371e010004266e95200033032374c00297ae01330060060033756605e0066eb8c0b4008c0c4008c0bc004c08c080c8c8cc004004008894ccc0a400452809919299981419b8f00201314a2266008008002605a0046eb8c0ac004dd61814181498149814981498149814981498149810980b181080f19b8748008c08cdd51813800981380098130011bad3024001301c007375a604400260440046eb4c080004c080008c078004c078008c070004c070008dd7180d0009809008980c00098080008b19991800800911299980b8010a60103d87a80001323253330163370e0069000099ba548000cc0680092f5c0266600a00a00266e0400d2002301b00330190023758602c602e602e601e6008601e0189000180a80098068008b19191980080080111299980a0008a60103d87a80001323253330133375e600c602200400e266e952000330170024bd70099802002000980c001180b0009bac3001300c3001300c009230130013011001300900116300130080052300f301000114984d958c94ccc024cdc3a400000226464a66601c60220042930b1bad300f0013007005153330093370e9001000899191919299980818098010a4c2c6eb4c044004c044008dd6980780098038028a99980499b87480100044c8c94ccc038c0440084c926300500116300f0013007005153330093370e90030008a99980618038028a4c2c2c600e00864a66601066e1d200000113232323232323232323232325333017301a0021323232498c94ccc05ccdc3a400000226464646464646464a666044604a0042930b1bad30230013023002375a604200260420046eb4c07c004c07c008dd6980e800980a8020b180a80199299980b19b87480000044c8c8c8c94ccc074c08000852616375c603c002603c0046eb8c070004c05002458c050020c03802458c060004c060008dd6980b000980b0011bad301400130140023012001301200230100013010002375c601c002600c00a2c600c008464a66601066e1d2000001132323232323253330113014002132498c94ccc03ccdc3a4000002264646464a66602c60320042930b1bad30170013017002375a602a002601a0082c601a0062c66e1d2002300e375460240026024004602000260200046eb4c038004c01800858c0180048c014dd5000918019baa0015734aae7555cf2ab9f5740ae855d101",
+      "hash": "7747f61ee5b669fd4e0eee392d09795195e98f8c8e7c19349f7861b0"
+    }
+  ],
+  "definitions": {
+    "Bool": {
+      "title": "Bool",
+      "anyOf": [
+        {
+          "title": "False",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "True",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "vault/VaultRedeemer": {
+      "title": "VaultRedeemer",
+      "description": "Actions users can perform on vault",
+      "anyOf": [
+        {
+          "title": "Deposit",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "amount",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        },
+        {
+          "title": "Withdraw",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "current_il",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        },
+        {
+          "title": "UpdatePolicy",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "title": "new_policy",
+              "$ref": "#/definitions/yield_safe~1types~1UserPolicy"
+            }
+          ]
+        },
+        {
+          "title": "EmergencyExit",
+          "dataType": "constructor",
+          "index": 3,
+          "fields": []
+        }
+      ]
+    },
+    "yield_safe/types/Asset": {
+      "title": "Asset",
+      "description": "Asset definition (PolicyID + TokenName)",
+      "anyOf": [
+        {
+          "title": "Asset",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "policy_id",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "token_name",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "yield_safe/types/AssetRatio": {
+      "title": "AssetRatio",
+      "description": "Asset ratio for price tracking and IL calculations",
+      "anyOf": [
+        {
+          "title": "AssetRatio",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "asset_a_amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "asset_b_amount",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "yield_safe/types/PoolState": {
+      "title": "PoolState",
+      "description": "Pool state at a specific point in time",
+      "anyOf": [
+        {
+          "title": "PoolState",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "reserve_a",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "reserve_b",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "total_lp_tokens",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "last_update_time",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "yield_safe/types/UserPolicy": {
+      "title": "UserPolicy",
+      "description": "User's IL protection configuration",
+      "anyOf": [
+        {
+          "title": "UserPolicy",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "max_il_percent",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "deposit_ratio",
+              "$ref": "#/definitions/yield_safe~1types~1AssetRatio"
+            },
+            {
+              "title": "emergency_withdraw",
+              "$ref": "#/definitions/Bool"
+            }
+          ]
+        }
+      ]
+    },
+    "yield_safe/types/VaultDatum": {
+      "title": "VaultDatum",
+      "description": "Vault datum containing user funds and policy",
+      "anyOf": [
+        {
+          "title": "VaultDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "owner",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "policy",
+              "$ref": "#/definitions/yield_safe~1types~1UserPolicy"
+            },
+            {
+              "title": "lp_asset",
+              "$ref": "#/definitions/yield_safe~1types~1Asset"
+            },
+            {
+              "title": "deposit_amount",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "deposit_time",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "initial_pool_state",
+              "$ref": "#/definitions/yield_safe~1types~1PoolState"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
