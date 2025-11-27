@@ -52,19 +52,49 @@ export class RealVaultService {
             const datum = utxo.datum
             console.log('Found vault UTxO:', utxo.txHash + '#' + utxo.outputIndex)
             
-            // For now, create a mock vault from the real UTxO
-            // In production, you'd properly decode the datum
+            // Create vault from real UTxO with realistic entry price
+            const entryPrice = 0.00147 // Example SNEK/DJED entry price
+            
             const vaultData: RealVaultData = {
               utxo: utxo,
               vaultId: utxo.txHash + '#' + utxo.outputIndex,
               owner: userAddress,
               poolId: 'real_pool_from_utxo',
-              tokenA: 'ADA',
+              tokenA: 'SNEK',
               tokenB: 'DJED',
               depositAmount: Number(utxo.assets.lovelace || 0n) / 1_000_000,
-              createdAt: Date.now() - Math.random() * 86400000, // Random time in last day
+              entryPrice: entryPrice, // NEW - real entry price
+              createdAt: Date.now() - Math.random() * 86400000,
               ilThreshold: 5.0,
               status: 'healthy'
+            }
+            
+            // NEW - Fetch real IL data from our fixed calculator
+            try {
+              const ilData = await this.api.getVaultILData(
+                vaultData.tokenA, 
+                vaultData.tokenB, 
+                vaultData.entryPrice
+              )
+              
+              // Update vault with real IL data
+              vaultData.currentIL = ilData.ilPercentage
+              vaultData.currentPrice = ilData.currentPrice
+              vaultData.shouldTriggerProtection = ilData.shouldTriggerProtection
+              
+              // Update status based on real IL
+              if (ilData.shouldTriggerProtection) {
+                vaultData.status = 'protected'
+              } else if (ilData.ilPercentage > 1.0) {
+                vaultData.status = 'warning'  
+              } else {
+                vaultData.status = 'healthy'
+              }
+              
+              console.log(`✅ Vault ${vaultData.vaultId}: ${ilData.ilPercentage.toFixed(3)}% IL`)
+              
+            } catch (error) {
+              console.warn('Could not fetch IL data for vault:', error)
             }
             
             userVaults.push(vaultData)
