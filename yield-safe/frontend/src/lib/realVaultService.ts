@@ -1,4 +1,5 @@
 import { Lucid } from 'lucid-cardano'
+import { YieldSafeAPI } from './yieldSafeAPI'
 
 export interface RealVaultData {
   utxo: any
@@ -8,18 +9,24 @@ export interface RealVaultData {
   tokenA: string
   tokenB: string
   depositAmount: number
+  entryPrice: number // NEW - track entry price for IL calculation
   createdAt: number
   ilThreshold: number
   status: 'healthy' | 'warning' | 'protected'
+  currentIL?: number // NEW - real IL percentage
+  currentPrice?: number // NEW - current token price
+  shouldTriggerProtection?: boolean // NEW - protection status
 }
 
 export class RealVaultService {
   private lucid: Lucid
   private vaultAddress: string
+  private api: YieldSafeAPI // NEW - API connection
 
   constructor(lucid: Lucid, vaultAddress: string) {
     this.lucid = lucid
     this.vaultAddress = vaultAddress
+    this.api = new YieldSafeAPI() // Connect to our fixed IL calculator
   }
 
   async getUserVaults(userAddress: string): Promise<RealVaultData[]> {
