@@ -8,7 +8,7 @@ export class YieldSafeAPI {
   }
 
   // Get real IL data for a vault
-  async getVaultILData(tokenA: string, tokenB: string, entryPrice: number): Promise<{
+  async getVaultILData(tokenA: string, tokenB: string, entryPrice: number, ilThreshold?: number): Promise<{
     currentPrice: number
     ilPercentage: number
     ilAmount: number
@@ -23,6 +23,7 @@ export class YieldSafeAPI {
           tokenA,
           tokenB, 
           entryPrice,
+          ilThreshold,
           dex: 'MinswapV2'
         })
       })

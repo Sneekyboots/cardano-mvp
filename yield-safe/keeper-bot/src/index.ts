@@ -3,6 +3,7 @@ import { KeeperBot } from "./keeper/keeper-bot.js";
 import { DatabaseService } from "./database/database.js";
 import { PoolMonitor } from "./monitoring/pool-monitor.js";
 import { ILCalculator } from "./calculations/il-calculator.js";
+import { BlockchainVaultSync } from "./services/blockchainVaultSync.js";
 import { logger } from "./utils/logger.js";
 import { loadConfig } from "./utils/config.js";
 import cron from "node-cron";
@@ -34,7 +35,15 @@ async function main() {
     
     const poolMonitor = new PoolMonitor(lucid, database);
     const ilCalculator = new ILCalculator();
+    const blockchainSync = new BlockchainVaultSync(lucid, database);
     const keeperBot = new KeeperBot(lucid, database, poolMonitor, ilCalculator, config);
+    
+    // Sync vaults from blockchain first
+    logger.info("🔄 Syncing real vaults from blockchain...");
+    await blockchainSync.syncVaultsFromBlockchain();
+    
+    // Start periodic vault sync every 5 minutes
+    await blockchainSync.startPeriodicSync(5);
     
     // Start monitoring pools for price changes
     logger.info("📊 Starting pool monitoring...");
@@ -59,6 +68,7 @@ async function main() {
     cron.schedule("0 * * * *", async () => {
       logger.info("🧹 Cleaning up old data...");
       await database.cleanup();
+      await blockchainSync.pruneClosedVaults();
     });
     
     // Health check every 10 minutes
@@ -67,8 +77,6 @@ async function main() {
     });
     
     logger.info("✅ Yield Safe Keeper Bot is running!");
-    logger.info(`🔧 Monitoring ${config.monitoredPools.length} pools`);
-    logger.info(`⚙️  IL threshold: ${config.keeper.defaultILThreshold / 100}%`);
     
     // Keep the process running
     process.on('SIGINT', async () => {

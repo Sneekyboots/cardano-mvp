@@ -17,41 +17,90 @@ export function Dashboard() {
   })
   const [loading, setLoading] = useState(false)
 
-  // Real vault contract address
-  const VAULT_ADDRESS = 'addr_test1wpm50as7ukmxnl2wpm50as7ukmxnl2wpm50as7ukmxnl2wpmhrjtgf09get6v03j88cxf5nauxrvq2clnt3'
-
   useEffect(() => {
-    if (isConnected && lucid && address) {
+    if (isConnected && address) {
       fetchRealData()
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchRealData, 30000)
+      // Refresh every 10 seconds to show updated vaults
+      const interval = setInterval(fetchRealData, 10000)
       return () => clearInterval(interval)
     }
-  }, [isConnected, lucid, address])
+  }, [isConnected, address])
 
   const fetchRealData = async () => {
-    if (!lucid || !address) return
+    if (!address) return
     
     setLoading(true)
     try {
-      const vaultService = new RealVaultService(lucid, VAULT_ADDRESS)
+      // Call backend API to get user's vaults (faster than blockchain query)
+      const response = await fetch('http://localhost:3001/api/vault/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress: address })
+      })
       
-      // Fetch real vault data
-      const vaults = await vaultService.getUserVaults(address)
-      setRealVaults(vaults)
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`)
+      }
       
-      // Calculate real metrics
-      const metrics = await vaultService.getRealMetrics(vaults)
+      const data = await response.json()
+      console.log(`📊 Dashboard: Found ${data.vaults?.length || 0} real vaults for address ${address.slice(0, 20)}...`)
+      console.log(`📊 Backend returned vaults:`, data.vaults)
+      
+      // Transform backend vault format to RealVaultData
+      const transformedVaults: RealVaultData[] = (data.vaults || []).map((vault: any) => ({
+        utxo: null,
+        vaultId: vault.vaultId || `vault-${Date.now()}`,
+        owner: vault.owner || '',
+        poolId: vault.poolId || vault.tokenPair?.split('/')[1] || '',
+        tokenA: vault.tokenPair?.split('/')[0] || 'ADA',
+        tokenB: vault.tokenPair?.split('/')[1] || '',
+        depositAmount: vault.depositAmount || 0,
+        entryPrice: vault.entryPrice || 0,
+        createdAt: vault.createdAt || Date.now(),
+        ilThreshold: vault.ilThreshold || 10,
+        status: (vault.ilPercentage || 0) > (vault.ilThreshold || 10) ? 'protected' : 'healthy',
+        currentIL: vault.ilPercentage || 0,
+        currentPrice: vault.currentPrice || vault.entryPrice,
+        shouldTriggerProtection: (vault.ilPercentage || 0) > (vault.ilThreshold || 10)
+      }))
+      
+      setRealVaults(transformedVaults)
+      
+      // Calculate metrics
+      const metrics = {
+        totalVaults: transformedVaults.length,
+        totalValue: transformedVaults.reduce((sum, v) => sum + v.depositAmount, 0),
+        averageIL: transformedVaults.length > 0 
+          ? transformedVaults.reduce((sum, v) => sum + (v.currentIL || 0), 0) / transformedVaults.length
+          : 0,
+        protectedValue: transformedVaults
+          .filter(v => v.shouldTriggerProtection)
+          .reduce((sum, v) => sum + v.depositAmount, 0)
+      }
       setRealMetrics(metrics)
       
-      console.log('✅ Dashboard updated with real data')
+      console.log('✅ Dashboard updated with real data from backend')
       
     } catch (error) {
-      console.error('Failed to fetch real data:', error)
+      console.error('❌ Failed to fetch real data:', error)
     } finally {
       setLoading(false)
     }
   }
+
+  // Transform RealVaultData to Vault interface expected by VaultCard
+  const transformVaultData = (realVault: RealVaultData) => ({
+    id: realVault.vaultId,
+    poolId: realVault.poolId,
+    tokenA: realVault.tokenA,
+    tokenB: realVault.tokenB,
+    depositAmount: realVault.depositAmount,
+    currentValue: realVault.depositAmount * 1.02, // Placeholder - should calculate actual current value
+    ilPercentage: realVault.currentIL || 0,
+    ilThreshold: realVault.ilThreshold,
+    status: realVault.status === 'protected' ? 'danger' as const : realVault.status,
+    lastUpdate: realVault.createdAt
+  })
 
   if (!isConnected) {
     return (
@@ -78,7 +127,7 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricsCard
           title="Total Vaults"
-          value={mockMetrics.totalVaults}
+          value={realMetrics.totalVaults}
           icon={
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -87,7 +136,7 @@ export function Dashboard() {
         />
         <MetricsCard
           title="Total Value"
-          value={`${mockMetrics.totalValue.toLocaleString()} ADA`}
+          value={`${realMetrics.totalValue.toLocaleString()} ADA`}
           icon={
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
@@ -96,8 +145,8 @@ export function Dashboard() {
         />
         <MetricsCard
           title="Avg IL"
-          value={`${mockMetrics.averageIL.toFixed(1)}%`}
-          status={mockMetrics.averageIL > 4 ? 'warning' : 'healthy'}
+          value={`${realMetrics.averageIL.toFixed(1)}%`}
+          status={realMetrics.averageIL > 4 ? 'warning' : 'healthy'}
           icon={
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -106,7 +155,7 @@ export function Dashboard() {
         />
         <MetricsCard
           title="Protected"
-          value={`${mockMetrics.protectedValue} ADA`}
+          value={`${realMetrics.protectedValue} ADA`}
           status="healthy"
           icon={
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -119,11 +168,23 @@ export function Dashboard() {
       {/* Vaults Grid */}
       <div>
         <h2 className="text-2xl font-bold text-white mb-6">Your Vaults</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {mockVaults.map((vault) => (
-            <VaultCard key={vault.id} vault={vault} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-2 text-gray-400">Loading your vaults...</p>
+          </div>
+        ) : realVaults.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-400">No vaults found for your wallet.</p>
+            <p className="text-sm text-gray-500 mt-2">Create a vault to get started with IL protection.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {realVaults.map((vault) => (
+              <VaultCard key={vault.vaultId} vault={transformVaultData(vault)} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Activity Feed */}

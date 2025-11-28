@@ -1,5 +1,5 @@
 // Real IL Detection with Charli3 API Integration
-import { Lucid } from 'lucid-cardano'
+// import { Lucid } from 'lucid-cardano' // Commented out - not needed for Charli3 API calls
 
 interface Charli3PoolData {
   pair: string
@@ -326,27 +326,21 @@ export class RealILCalculator {
         console.log(`🔑 Using policy ID for ${token}: ${policyId.slice(0, 16)}...`)
         
         const url = new URL(`${this.baseUrl}/tokens/current`)
-        url.searchParams.append('policy', policyId)
-        
+        url.searchParams.append('symbols', token)
+
         const response = await fetch(url.toString(), {
           headers: { 'Authorization': `Bearer ${this.charli3ApiKey}` }
         })
-        
+
         if (response.ok) {
           const data = await response.json() as any
-          
-          if (data.s !== 'error') {
-            // Extract price from response structure
-            const price = data.c?.[0] || data.price || data.current_price
-            
-            if (price && typeof price === 'number' && price > 0) {
-              console.log(`✅ ${token} real price: $${price} (from policy ID)`)
-              
-              return {
-                price: price,
-                timestamp: data.t || Date.now()
-              }
-            }
+
+          // Charli3 may return object keyed by symbol
+          const price = data[token]?.price || data.data?.[token]?.price || data.price || data.c?.[0]
+
+          if (price && typeof price === 'number' && price > 0) {
+            console.log(`✅ ${token} real price: $${price} (from policy ID)`)
+            return { price, timestamp: data.t || Date.now() }
           }
         }
       }
@@ -357,26 +351,20 @@ export class RealILCalculator {
         console.log(`🏊 Using pool ID for ${token}: ${poolId.slice(0, 16)}...`)
         
         const url = new URL(`${this.baseUrl}/tokens/current`)
+        // Charli3 accepts symbols or pool; use pool as a hint
         url.searchParams.append('pool', poolId)
-        
+
         const response = await fetch(url.toString(), {
           headers: { 'Authorization': `Bearer ${this.charli3ApiKey}` }
         })
-        
+
         if (response.ok) {
           const data = await response.json() as any
-          
-          if (data.s !== 'error') {
-            const price = data.c?.[0] || data.price || data.current_price
-            
-            if (price && typeof price === 'number' && price > 0) {
-              console.log(`✅ ${token} real price: $${price} (from pool ID)`)
-              
-              return {
-                price: price,
-                timestamp: data.t || Date.now()
-              }
-            }
+          const price = data[token]?.price || data.data?.[token]?.price || data.price || data.c?.[0]
+
+          if (price && typeof price === 'number' && price > 0) {
+            console.log(`✅ ${token} real price: $${price} (from pool ID)`)
+            return { price, timestamp: data.t || Date.now() }
           }
         }
       }
@@ -457,7 +445,12 @@ export class RealILCalculator {
     return (tokenAAmount * priceA) + (tokenBAmount * priceB)
   }
 
-  async calculateRealIL(userPosition: UserPosition, poolData: Charli3PoolData): Promise<RealILData> {
+  async calculateRealIL(
+    userPosition: UserPosition,
+    poolData: Charli3PoolData,
+    tokenA?: string,
+    tokenB?: string
+  ): Promise<RealILData> {
     try {
       console.log('📊 Calculating real IL with live data...')
       console.log(`🔍 Entry price: ${userPosition.initial_price}`)
@@ -466,28 +459,62 @@ export class RealILCalculator {
       // PROPER IL Calculation using the standard AMM formula
       const entryPrice = userPosition.initial_price
       const currentPrice = poolData.price
-      
-      // Calculate price ratio
+
+      // Calculate price ratio (both entryPrice and currentPrice must be in the same units: tokenA per tokenB)
       const priceRatio = currentPrice / entryPrice
       console.log(`📊 Price ratio: ${priceRatio.toFixed(6)}`)
-      
-      // Standard IL formula: IL = 2*sqrt(price_ratio) / (1 + price_ratio) - 1
-      const sqrtRatio = Math.sqrt(priceRatio)
-      const il = (2 * sqrtRatio) / (1 + priceRatio) - 1
-      const ilPercentage = il * 100
-      
-      console.log(`🧮 IL calculation: 2*√${priceRatio.toFixed(4)} / (1 + ${priceRatio.toFixed(4)}) - 1`)
-      console.log(`📈 IL result: ${ilPercentage.toFixed(4)}%`)
 
-      // Calculate actual values for display
-      const tokenAValue = userPosition.token_a_amount * currentPrice
-      const tokenBValue = userPosition.token_b_amount * 1.0 // Assuming DJED = $1
-      const totalCurrentValue = tokenAValue + tokenBValue
-      
-      // Calculate what LP position is worth (simplified)
-      const lpValue = totalCurrentValue * (1 + il) // LP value after IL
-      const holdValue = totalCurrentValue // What holding would be worth
-      const ilAmount = holdValue - lpValue // Actual loss amount
+      // Proper IL loss formula (positive when there is impermanent loss):
+      // IL_loss = 1 - (2 * sqrt(r)) / (1 + r)
+      const sqrtRatio = Math.sqrt(priceRatio)
+      const ilLoss = 1 - (2 * sqrtRatio) / (1 + priceRatio)
+      const ilPercentage = ilLoss * 100
+
+      console.log(`🧮 IL calculation: 1 - 2*√${priceRatio.toFixed(4)} / (1 + ${priceRatio.toFixed(4)})`)
+      console.log(`📈 IL loss result: ${ilPercentage.toFixed(4)}%`)
+
+      // Get USD prices for tokenA and tokenB to compute accurate USD values for hold/LP
+      // Try to fetch live prices; otherwise fall back to conservative estimates
+      let priceA_USD = 1.0
+      let priceB_USD = 1.0
+      try {
+        if (tokenA) {
+          const pA = await this.fetchTokenPrice(tokenA)
+          if (pA && pA.price) priceA_USD = pA.price
+        }
+        if (tokenB) {
+          const pB = await this.fetchTokenPrice(tokenB)
+          if (pB && pB.price) priceB_USD = pB.price
+        }
+      } catch (e) {
+        // ignore and use estimates below
+      }
+
+      // Fallback USD map (keeps previous conservative estimates)
+      const usdPriceMap: Record<string, number> = {
+        'ADA': 0.45,
+        'DJED': 1.02,
+        'USDC': 1.00,
+        'SNEK': 0.0015,
+        'AGIX': 0.35,
+        'C3': 0.12,
+        'WMT': 0.08,
+        'MIN': 0.025,
+        'COPI': 0.18,
+        'HOSKY': 0.0001
+      }
+
+      if ((!tokenA || !priceA_USD || priceA_USD <= 0) && tokenA) priceA_USD = usdPriceMap[tokenA] || 0.1
+      if ((!tokenB || !priceB_USD || priceB_USD <= 0) && tokenB) priceB_USD = usdPriceMap[tokenB] || 1.0
+
+      // Calculate actual values for display in USD
+      const tokenAValueUSD = userPosition.token_a_amount * priceA_USD
+      const tokenBValueUSD = userPosition.token_b_amount * priceB_USD
+      const holdValue = tokenAValueUSD + tokenBValueUSD // What holding would be worth in USD
+
+      // LP position value after applying IL loss
+      const lpValue = holdValue * (1 - ilLoss)
+      const ilAmount = holdValue - lpValue
       
       const result: RealILData = {
         ilPercentage: Math.abs(ilPercentage), // Use absolute value for display
@@ -530,8 +557,13 @@ export class RealILCalculator {
       vaultData.dex
     )
 
-    // Calculate real IL
-    const ilData = await this.calculateRealIL(vaultData.user_position, poolData)
+    // Calculate real IL (pass token symbols so USD prices can be resolved)
+    const ilData = await this.calculateRealIL(
+      vaultData.user_position,
+      poolData,
+      vaultData.token_a,
+      vaultData.token_b
+    )
 
     // Check if protection should trigger
     const shouldTriggerProtection = Math.abs(ilData.ilPercentage) > vaultData.il_threshold

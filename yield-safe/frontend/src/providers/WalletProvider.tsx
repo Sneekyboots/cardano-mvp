@@ -137,6 +137,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
       // Set wallet in Lucid
       lucid.selectWallet(eternlWallet)
       
+      // Verify wallet is properly connected to Lucid
+      if (!lucid.wallet) {
+        throw new Error('Wallet not properly connected to Lucid instance')
+      }
+      
       // Get wallet address
       const walletAddress = await lucid.wallet.address()
       
@@ -146,6 +151,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
       setIsConnected(true)
       
       console.log('✅ Eternl wallet connected:', walletAddress)
+      console.log('✅ Lucid.wallet properly initialized')
       
     } catch (error) {
       console.error('❌ Wallet connection failed:', error)

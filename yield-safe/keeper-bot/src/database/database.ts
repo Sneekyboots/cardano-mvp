@@ -59,6 +59,67 @@ export class DatabaseService {
     };
   }
 
+  // Store real vault from blockchain
+  async storeVault(vaultData: any) {
+    if (!this.isInitialized) {
+      throw new Error("Database not initialized");
+    }
+    
+    logger.debug(`💾 Storing vault: ${vaultData.vaultId} (${vaultData.tokenA}/${vaultData.tokenB})`);
+    // In production, this would insert into SQLite
+    // For now, store in memory
+    if (!this.vaults) this.vaults = new Map();
+    this.vaults.set(vaultData.vaultId, vaultData);
+    await this.sleep(100);
+  }
+
+  // Get vault by ID
+  async getVault(vaultId: string) {
+    if (!this.isInitialized) {
+      throw new Error("Database not initialized");
+    }
+    
+    if (!this.vaults) return null;
+    return this.vaults.get(vaultId) || null;
+  }
+
+  // Get all active vaults
+  async getAllActiveVaults() {
+    if (!this.isInitialized) {
+      throw new Error("Database not initialized");
+    }
+    
+    if (!this.vaults) return [];
+    return Array.from(this.vaults.values()).filter(v => v.status === 'active');
+  }
+
+  // Get all vaults (active and inactive)
+  async getAllVaults() {
+    if (!this.isInitialized) {
+      throw new Error("Database not initialized");
+    }
+    
+    if (!this.vaults) return [];
+    return Array.from(this.vaults.values());
+  }
+
+  // Update vault status
+  async updateVaultStatus(vaultId: string, status: string) {
+    if (!this.isInitialized) {
+      throw new Error("Database not initialized");
+    }
+    
+    if (this.vaults && this.vaults.has(vaultId)) {
+      const vault = this.vaults.get(vaultId);
+      vault.status = status;
+      this.vaults.set(vaultId, vault);
+      logger.debug(`✅ Updated vault ${vaultId} status to ${status}`);
+    }
+    await this.sleep(50);
+  }
+
+  private vaults?: Map<string, any>;
+
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

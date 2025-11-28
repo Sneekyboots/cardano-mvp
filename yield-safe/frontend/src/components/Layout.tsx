@@ -51,6 +51,16 @@ export function Layout({ children }: LayoutProps) {
                   >
                     Create Vault
                   </Link>
+                  <Link
+                    to="/manage"
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                      isActive('/manage') 
+                        ? 'bg-blue-600 text-white' 
+                        : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                    }`}
+                  >
+                    🚨 Manage Vaults
+                  </Link>
                 </div>
               </div>
             </div>

@@ -3,6 +3,12 @@ import { Buffer } from 'buffer'
 
 // Helper function to convert string to hex
 function stringToHex(str: string): string {
+  if (!str) return ''
+  // If already looks like hex (only 0-9, a-f), return as is
+  if (/^[0-9a-fA-F]*$/.test(str)) {
+    return str.toLowerCase()
+  }
+  // Otherwise convert UTF-8 to hex
   return Buffer.from(str, 'utf8').toString('hex')
 }
 
@@ -81,24 +87,24 @@ export class VaultTransactionBuilder {
       // Create vault datum
       const vaultDatum: VaultDatum = {
         owner: ownerPubKeyHash,
-        pool_id: stringToHex(params.poolId),
+        pool_id: stringToHex(params.poolId || 'unknown'),
         asset_a: {
-          policy_id: params.tokenA.policyId === '' ? '' : params.tokenA.policyId,
-          token_name: stringToHex(params.tokenA.tokenName)
+          policy_id: params.tokenA.policyId || '',
+          token_name: stringToHex(params.tokenA.tokenName || 'ADA')
         },
         asset_b: {
-          policy_id: params.tokenB.policyId === '' ? '' : params.tokenB.policyId,
-          token_name: stringToHex(params.tokenB.tokenName)
+          policy_id: params.tokenB.policyId || '',
+          token_name: stringToHex(params.tokenB.tokenName || '')
         },
-        deposit_amount: BigInt(params.depositAmount * 1000000), // Convert ADA to lovelace
-        deposit_time: BigInt(Date.now()),
+        deposit_amount: BigInt(Math.floor(params.depositAmount * 1000000)), // Convert ADA to lovelace
+        deposit_time: BigInt(Math.floor(Date.now() / 1000)), // Unix timestamp in seconds
         initial_pool_state: {
           reserve_a: BigInt(1000000000000), // Mock initial reserves
           reserve_b: BigInt(500000000000),
           total_lp_tokens: BigInt(100000000)
         },
         il_protection_policy: {
-          max_il_percentage: BigInt(params.ilThreshold * 100), // Convert % to basis points
+          max_il_percentage: BigInt(Math.floor(params.ilThreshold * 100)), // Convert % to basis points
           protection_fee_rate: BigInt(50), // 0.5%
           emergency_exit_fee_rate: BigInt(100) // 1%
         }

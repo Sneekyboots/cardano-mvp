@@ -14,11 +14,16 @@
     "format": "prettier --write src/**/*.ts"
   },
   "dependencies": {
+    "@blockfrost/blockfrost-js": "^6.0.0",
     "@cardano-sdk/core": "^0.15.0",
     "@cardano-sdk/crypto": "^0.1.16",
     "@emurgo/cardano-serialization-lib-nodejs": "^11.5.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
     "axios": "^1.6.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "express": "^5.1.0",
     "lucid-cardano": "^0.10.7",
     "node-cron": "^3.0.3",
     "sqlite3": "^5.1.6",

@@ -6,7 +6,7 @@ import { ActivityFeed } from '../components/ActivityFeed'
 import { WalletBalance } from '../components/WalletBalance'
 import { RealVaultService, RealVaultData } from '../lib/realVaultService'
 
-export function Dashboard() {
+export function RealDashboard() {
   const { isConnected, lucid, address } = useWallet()
   const [realVaults, setRealVaults] = useState<RealVaultData[]>([])
   const [realMetrics, setRealMetrics] = useState({
@@ -16,38 +16,58 @@ export function Dashboard() {
     protectedValue: 0
   })
   const [loading, setLoading] = useState(false)
+  const [vaultAddress, setVaultAddress] = useState<string | null>(null)
 
-  // Real vault contract address
-  const VAULT_ADDRESS = 'addr_test1wpm50as7ukmxnl2wpm50as7ukmxnl2wpm50as7ukmxnl2wpmhrjtgf09get6v03j88cxf5nauxrvq2clnt3'
+  // Fetch vault address from backend
+  useEffect(() => {
+    const fetchVaultAddress = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/vault/address')
+        const data = await response.json()
+        if (data.success) {
+          setVaultAddress(data.vaultAddress)
+          console.log('✅ Vault address loaded:', data.vaultAddress)
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch vault address:', error)
+      }
+    }
+    fetchVaultAddress()
+  }, [])
 
   useEffect(() => {
-    if (isConnected && lucid && address) {
+    if (isConnected && lucid && address && vaultAddress) {
       fetchRealData()
       // Refresh every 30 seconds
       const interval = setInterval(fetchRealData, 30000)
       return () => clearInterval(interval)
     }
-  }, [isConnected, lucid, address])
+  }, [isConnected, lucid, address, vaultAddress])
 
   const fetchRealData = async () => {
     if (!lucid || !address) return
     
     setLoading(true)
     try {
-      const vaultService = new RealVaultService(lucid, VAULT_ADDRESS)
+      console.log('🔍 Fetching real vaults for dashboard...')
       
-      // Fetch real vault data
+      // Use the same RealVaultService that actually works
+      const vaultService = new RealVaultService(lucid, vaultAddress || '')
+      
+      // Get real vault data from blockchain UTXOs (not from broken database)
       const vaults = await vaultService.getUserVaults(address)
       setRealVaults(vaults)
       
-      // Calculate real metrics
+      // Calculate real metrics from actual vault data
       const metrics = await vaultService.getRealMetrics(vaults)
       setRealMetrics(metrics)
       
-      console.log('✅ Dashboard updated with real data')
+      console.log('✅ Dashboard updated with real blockchain data:', vaults)
       
     } catch (error) {
-      console.error('Failed to fetch real data:', error)
+      console.error('❌ Failed to fetch real data:', error)
+      setRealVaults([])
+      setRealMetrics({ totalVaults: 0, totalValue: 0, averageIL: 0, protectedValue: 0 })
     } finally {
       setLoading(false)
     }
@@ -79,7 +99,7 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">🚀 Real Dashboard</h1>
-          <p className="text-gray-400">Live data from Cardano Preview testnet • Contract: {VAULT_ADDRESS.slice(0, 20)}...</p>
+          <p className="text-gray-400">Live data from Cardano Preview testnet • Contract: {vaultAddress ? vaultAddress.slice(0, 20) + '...' : 'Loading...'}</p>
         </div>
         
         {loading && (
@@ -147,7 +167,7 @@ export function Dashboard() {
               {loading ? 'Searching blockchain for your vaults...' : 'No vault UTxOs found at the smart contract address.'}
             </p>
             <div className="space-y-2 text-sm text-gray-400">
-              <p>Contract: {VAULT_ADDRESS}</p>
+              <p>Contract: {vaultAddress || 'Loading...'}</p>
               <p>Network: Cardano Preview Testnet</p>
             </div>
             <a

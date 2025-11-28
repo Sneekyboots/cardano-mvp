@@ -10,7 +10,7 @@ use aiken/transaction/credential.{Address, Credential, VerificationKeyCredential
 use aiken/transaction/value.{AssetName, PolicyId, Value, quantity_of}
 
 // ============================================================================
-// TYPES
+// YIELD SAFE VAULT CONTRACT v2.0 - Fresh Start
 // ============================================================================
 
 /// Asset definition (PolicyID + TokenName)
@@ -148,11 +148,14 @@ validator {
         let output_lp_amount = quantity_of(own_output.value, lp_asset.policy_id, lp_asset.token_name)
         let correct_withdrawal = output_lp_amount == input_lp_amount - amount
         
+        // Must have minimum ADA for fees
+        let has_min_ada = quantity_of(own_output.value, #"", #"") >= 2_000_000
+        
         // Datum should be updated
         expect VaultDatum { deposit_amount: new_deposit_amount, .. } = own_output.datum
         let correct_datum_update = new_deposit_amount == deposit_amount - amount
         
-        valid_signature && valid_amount && il_check && correct_withdrawal && correct_datum_update
+        valid_signature && valid_amount && il_check && correct_withdrawal && has_min_ada && correct_datum_update
       }
       
       // User updates their IL policy
@@ -190,14 +193,27 @@ validator {
       
       // Emergency exit - withdraw all funds regardless of IL
       EmergencyExit -> {
+        // Must be owner
         let valid_signature = signed_by_owner
+        
+        // Emergency must be enabled
         let emergency_enabled = emergency_withdraw
         
-        // All LP tokens should be withdrawn
+        // Must have LP tokens to withdraw
         let input_lp_amount = quantity_of(own_input.output.value, lp_asset.policy_id, lp_asset.token_name)
-        let no_output_to_script = True  // This consumes the UTxO entirely
+        let has_lp_tokens = input_lp_amount > 0
         
-        valid_signature && emergency_enabled && input_lp_amount > 0 && no_output_to_script
+        // The key: vault UTxO must NOT appear in outputs (fully consumed)
+        let vault_consumed = !list.any(
+          context.transaction.outputs,
+          fn(output) {
+            // Check if any output goes back to the vault script
+            output.address == own_input.output.address
+          }
+        )
+        
+        // All conditions must be true
+        valid_signature && emergency_enabled && has_lp_tokens && vault_consumed
       }
     }
   }
