@@ -495,11 +495,23 @@ export function VaultManagement() {
                   <div className="grid grid-cols-2 gap-4 mb-4 text-xs">
                     <div>
                       <span className="text-gray-400">Entry Price: </span>
-                      <span className="text-blue-300">{vault.entryPrice.toFixed(6)}</span>
+                      <span className="text-blue-300">
+                        {vault.entryPrice > 1 ? 
+                          vault.entryPrice.toFixed(4) : 
+                          vault.entryPrice.toFixed(6)
+                        }
+                      </span>
                     </div>
                     <div>
                       <span className="text-gray-400">Current Price: </span>
-                      <span className="text-green-300">{vault.currentPrice?.toFixed(6) || 'N/A'}</span>
+                      <span className="text-green-300">
+                        {vault.currentPrice ? 
+                          (vault.currentPrice > 1 ? 
+                            vault.currentPrice.toFixed(4) : 
+                            vault.currentPrice.toFixed(6)
+                          ) : 'N/A'
+                        }
+                      </span>
                     </div>
                   </div>
                 )}

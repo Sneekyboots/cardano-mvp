@@ -114,6 +114,42 @@ export class BlockchainVaultSync {
     }
   }
 
+  // Helper to map known policy IDs to token symbols (comprehensive token mapping)
+  private mapPolicyToSymbol(policyId: string): string {
+    const knownTokens: Record<string, string> = {
+      // Major tokens from apiServer.ts tokenPolicyMap
+      "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61": "DJED",
+      "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f": "SNEK",
+      "e4214b7cce62ac6fbba385d164df48e157eae5863521b4b67ca71d86": "MIN",
+      "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355": "USDC",
+      "d894897411707efa755a76deb66d26dfd50593f2e70863e1661e98a0": "SPACE",
+      "f43a62fdc3965df486de8a0d32fe800963589c41b38946602a0dc53541474958": "AGIX",
+      "533bb94a8850ee3ccbe483106489399112b74c905342cb1792a797a0": "HUNT",
+      "f6f49b186751e61f1fb8c64e7504e771f968cea9f4d11f5222b169e374756e65": "IAGON", 
+      "3a888d65f16790950a72daee1f63aa05add6d268434107cfa5b67712": "iUSD",
+      "5dac8536653edc12f6f5e1045d8164b9f59998d3bdc300fc92843489544e": "IBTC",
+      "5d16cc1a177b5d9ba9cfa9793b07e60f1fb70fea1f8aef064415d114": "NTX",
+      "25f0fc240e91bd95dcdaebd2ba7713fc5168ac77234a3d79449fc20c4f4f5054494d": "OPTIM",
+      "1d7f33bd23d85e1a25d87d86fac4f199c3197a2f7afeb662a0f34e1e776f726c64636f696e": "WRT",
+      "86df1c0b1bfaeef86e67d42eb7ffb69bab4c8ad19bcadf9f8b52bb6e434e544c": "CNTL",
+      "af2e27f580f7f08e93190a81f72462f153026d06450924726645891b": "DJED",
+      "6ac8ef33b510ec004fe11585f7c5a9f0c07f0c23428ab4f29c1d7d104d494e": "MIN",
+      "dda5fdb1002f7389b33e036b6afee82a8189becb6cba852e8b79b4fb0014df44524950": "DRIPN",
+      "9a9693a9a37912a5097918f97918d15240c92ab729a0b7c4aa144d77": "SUNDAE",
+      "6c8642400a9f4c1e3d5f6f84e8d6e1c2a9b35f4321a34567890123456789abcd": "C3"
+    };
+    
+    logger.debug(`   🔍 Looking up policy ID: ${policyId}`);
+    const symbol = knownTokens[policyId];
+    if (symbol) {
+      logger.debug(`   ✅ Found token symbol: ${symbol}`);
+      return symbol;
+    } else {
+      logger.debug(`   ⚠️  Unknown policy ID, using fallback: TOKEN`);
+      return "TOKEN";
+    }
+  }
+
   // Decode vault datum
   private decodeVaultDatum(datum: string, utxo: any): VaultData | null {
     try {
@@ -177,9 +213,41 @@ export class BlockchainVaultSync {
       const entryPrice =
         initialReserveB > 0 ? initialReserveA / initialReserveB / 1_000_000 : 0;
 
-      // Determine token symbols
+      // Determine token symbols with enhanced resolution logic
       const tokenASymbol = "ADA";
-      const tokenBSymbol = lpTokenName !== "LP" ? lpTokenName : "UNKNOWN";
+      let tokenBSymbol = "Loading..."; // Start with loading state
+      
+      logger.debug(`   🔍 Resolving token B symbol from LP policy: ${lpPolicyId}`);
+      
+      // Priority 1: Try to map from known policy IDs (most reliable)
+      if (lpPolicyId) {
+        const mappedSymbol = this.mapPolicyToSymbol(lpPolicyId);
+        if (mappedSymbol !== "TOKEN") {
+          tokenBSymbol = mappedSymbol;
+          logger.debug(`   ✅ Token B resolved from policy mapping: ${tokenBSymbol}`);
+        }
+      }
+      
+      // Priority 2: Try LP token name if available and not generic
+      if (tokenBSymbol === "Loading..." && lpTokenName && lpTokenName !== "LP" && lpTokenName.length < 10) {
+        tokenBSymbol = lpTokenName.toUpperCase();
+        logger.debug(`   ✅ Token B resolved from LP name: ${tokenBSymbol}`);
+      }
+      
+      // Priority 3: Try to decode from hex token name
+      if (tokenBSymbol === "Loading..." && lpTokenNameHex) {
+        const decodedName = this.hexToString(toHexString(lpTokenNameHex));
+        if (decodedName && decodedName !== "LP" && decodedName.length > 1 && decodedName.length < 10) {
+          tokenBSymbol = decodedName.toUpperCase();
+          logger.debug(`   ✅ Token B resolved from hex decode: ${tokenBSymbol}`);
+        }
+      }
+      
+      // Fallback: Use a generic token identifier
+      if (tokenBSymbol === "Loading...") {
+        tokenBSymbol = "TOKEN";
+        logger.warn(`   ⚠️  Could not resolve token B symbol, using fallback: ${tokenBSymbol}`);
+      }
 
       const vaultData: VaultData = {
         vaultId: `${utxo.txHash}#${utxo.outputIndex}`,

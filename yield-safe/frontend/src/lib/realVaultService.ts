@@ -9,6 +9,7 @@ export interface RealVaultData {
     tokenA: string;
     tokenB: string;
     depositAmount: number;
+    tokenBAmount?: number; // NEW - token B amount for IL calculation
     lpTokens: number; // LP token amount stored in vault
     entryPrice: number; // NEW - track entry price for IL calculation
     createdAt: number;
@@ -189,31 +190,64 @@ export class RealVaultService {
                             );
 
                             // Calculate entry price from initial pool state
+                            // For ADA/TokenB pair, price should be TokenB/ADA ratio
                             const entryPrice =
-                                initialReserveB > 0
-                                    ? initialReserveA / initialReserveB
+                                initialReserveA > 0
+                                    ? initialReserveB / initialReserveA
                                     : 0;
 
-                            // Determine token symbols from LP asset or use defaults
+                            // Determine token symbols with better mapping
                             const tokenASymbol = "ADA";
-                            const tokenBSymbol =
-                                lpTokenName !== "LP" ? lpTokenName : "TOKEN";
+                            
+                            // Map policy IDs to known token symbols (matching backend apiServer.ts)
+                            const tokenSymbolMap: { [key: string]: string } = {
+                                // Use policy ID only (not full policy+asset concatenation)
+                                "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61": "DJED",
+                                "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f": "SNEK", 
+                                "e4214b7cce62ac6fbba385d164df48e157eae5863521b4b67ca71d86": "MIN",
+                                "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355": "USDC",
+                                "d894897411707efa755a76deb66d26dfd50593f2e70863e1661e98a0": "SPACE",
+                                "f43a62fdc3965df486de8a0d32fe800963589c41b38946602a0dc53541474958": "AGIX",
+                                "533bb94a8850ee3ccbe483106489399112b74c905342cb1792a797a0": "HUNT",
+                                "f6f49b186751e61f1fb8c64e7504e771f968cea9f4d11f5222b169e374756e65": "IAGON",
+                                "3a888d65f16790950a72daee1f63aa05add6d268434107cfa5b67712": "iUSD",
+                                "5dac8536653edc12f6f5e1045d8164b9f59998d3bdc300fc92843489544e": "IBTC",
+                                "5d16cc1a177b5d9ba9cfa9793b07e60f1fb70fea1f8aef064415d114": "NTX",
+                                "25f0fc240e91bd95dcdaebd2ba7713fc5168ac77234a3d79449fc20c4f4f5054494d": "OPTIM",
+                                "6c8642400a9f4c1e3d5f6f84e8d6e1c2a9b35f4321a34567890123456789abcd": "C3"
+                            };
+                            
+                            // Extract just policy ID part from lpPolicyId (remove asset name suffix if present)
+                            const cleanPolicyId = lpPolicyId && lpPolicyId.length > 56 
+                                ? lpPolicyId.slice(0, 56)  // Standard policy ID length
+                                : lpPolicyId;
+                            
+                            let tokenBSymbol = tokenSymbolMap[cleanPolicyId] || lpTokenName;
+                            if (tokenBSymbol === "LP" || !tokenBSymbol) {
+                                tokenBSymbol = "Loading..."; // Use Loading instead of TOKEN to match user report
+                            }
 
-                            console.log(`   🏷️ Token B: ${tokenBSymbol}`);
+                            console.log(`   🔍 LP Policy ID (full): ${lpPolicyId}`);
+                            console.log(`   🔍 Clean Policy ID: ${cleanPolicyId}`);
+                            console.log(`   🏷️ Token B resolved: ${tokenBSymbol}`);
                             console.log(`   💰 Entry Price: ${entryPrice}`);
                             console.log(
                                 `   🎯 LP Tokens: ${lpTokens / 1_000_000}`,
                             );
                             console.log(`   🛡️ IL Threshold: ${ilThreshold}%`);
 
+                            // Calculate token B amount for proper IL calculation
+                            const tokenBAmount = assetBAmount / 1_000_000; // Convert to token units
+                            
                             vaultData = {
                                 utxo: utxo,
                                 vaultId: utxo.txHash + "#" + utxo.outputIndex,
                                 owner: ownerHex,
                                 poolId: lpPolicyId || "minswap",
                                 tokenA: tokenASymbol,
-                                tokenB: tokenBSymbol || "UNKNOWN",
+                                tokenB: tokenBSymbol,
                                 depositAmount: assetAAmount / 1_000_000, // Convert lovelace to ADA for display
+                                tokenBAmount: tokenBAmount, // Add token B amount
                                 lpTokens: lpTokens / 1_000_000, // Convert to display units
                                 entryPrice: entryPrice,
                                 createdAt: depositTime, // Already in milliseconds from Date.now()

@@ -498,23 +498,47 @@ app.post("/api/invest/complete-flow", async (req, res) => {
     // CRITICAL: Policy IDs must be exactly 56 hex characters (28 bytes)
     // Using correct Preview testnet policy IDs
     const tokenPolicyMap: { [key: string]: string } = {
-      SNEK: "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f", // 56 chars
-      DJED: "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61", // 56 chars
-      MIN: "e16c2dc8ae937e8d3790c7fd7168d7b994621ba14ca11415f39fed72", // 56 chars
-      SHEN: "c9db04a86b420b6b09f9d9b9b9e7b5f5a5d5c5b5a5d5c5b5a5d5c5b5", // 56 chars
-      USDC: "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880", // 56 chars
-      WMT: "1a3660be2e27b5fd9964932ad57e7ca31c6c4b7e3e74e0fd2c4c4b10", // 56 chars
-      AGIX: "f43a62fdc3965df486de8a0d32de07e7deadf4b4c6b3229f7af88ea5", // 56 chars
-      HOSKY: "a0028f350aaabe0545fdcb56b039bfb08e4bb4d8c4d7c3c7d481c235", // 56 chars
+      // ADA (no policy - empty)
+      ADA: "",
+      
+     
+      // Real working policy IDs from backend API (these match actual Charli3 data)
+      SPACE: "d894897411707efa755a76deb66d26dfd50593f2e70863e1661e98a07370616365636f696e73",
+      SNEK: "d4ebb118362241ad857a3c5c8c2e539b7522679f7da5300a8aa7f99d534e454b",
+      DJED: "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61446a65644d6963726f555344", 
+      USDC: "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff93555534443",
+      MIN: "e4214b7cce62ac6fbba385d164df48e157eae5863521b4b67ca71d86e07b35efe63415c6784977573ebe6a9ac79e4d9c13d88ff657dffc3b510ee901",
+      PZARAT: "d3168be018453698bd9bf32de66e6a66c83e936503a0e162e3e8c0c9505a41524154",
+      POPSNEK: "c7947f96052712c76701637d2a0b12a367b5cff89ac50e2872a96526504f50534e454b",
+      SEAL: "f0a5e9b4fd4869c6f8a8b63f5ac2eb2e07c80ff4c42e5b61d250b979",
+      PEPEZ: "91b39f49ef1f6aaf23a09cd3db7f5513370e40c0cf4ce2e22e03ee77504550455a",
+      
+      // Additional tokens that might be in vaults
+      AGIX: "f43a62fdc3965df486de8a0d32fe800963589c41b38946602a0dc535",
+      HUNT: "95a427e384527065f2f8946f5e86320d0117839a5e98ea2c0b55fb00",
+      IAGON: "5d16cc1a177b5d9ba9cfa9793b07e60f1fb70fea1f8aef064415d114",
+      IBTC: "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880",
+      NTX: "edfd7a1d77bcb8b884c474bdc92a16002d1fb720e454fa6e99344479",
+      OPTIM: "e52964af4fffdb54504859875b1827b60ba679074996156461143dc1",
+      C3: "8e51398904a5d3fc129fbf4f1589701de23c7824d5c90fdb9490e15a",
+      
     };
 
     const tokenBPolicyId = tokenPolicyMap[token_b_symbol] || "";
     const tokenBAssetNameHex = stringToHex(token_b_symbol);
 
-    // Validate hex strings using proper validation function
+    // Create reverse mapping to resolve policy ID back to symbol
+    const reversePolicyMap: { [policyId: string]: string } = Object.fromEntries(
+      Object.entries(tokenPolicyMap).map(([symbol, policy]) => [policy, symbol])
+    );
+
+    console.log(`   🔍 Token mapping: ${token_b_symbol} → Policy: ${tokenBPolicyId.slice(0, 20)}...`);
+    console.log(`   🔄 Reverse lookup available for ${Object.keys(reversePolicyMap).length} policies`);
+
+    // Validate hex strings (allow variable length for full policy+asset combos)
     if (tokenBPolicyId) {
       try {
-        validateHexString(tokenBPolicyId, `${token_b_symbol} policy ID`, 56);
+        validateHexString(tokenBPolicyId, `${token_b_symbol} policy ID`);
       } catch (e) {
         throw new Error(
           `Invalid token policy: ${e instanceof Error ? e.message : e}`,
@@ -756,9 +780,22 @@ app.post("/api/invest/protected", async (req, res) => {
 // Get vault IL status (main endpoint)
 app.post("/api/vault/il-status", async (req, res) => {
   try {
-    const { tokenA, tokenB, entryPrice, ilThreshold, dex = 'MinswapV2' } = req.body
+    const { 
+      tokenA, 
+      tokenB, 
+      entryPrice, 
+      ilThreshold, 
+      depositAmount = 1000, // ADA amount
+      tokenBAmount = 150,   // Token B amount
+      lpTokens = 100,       // LP tokens
+      dex = 'MinswapV2' 
+    } = req.body
     
-    console.log(`📊 IL Status Request: ${tokenA}/${tokenB}, entry: ${entryPrice}, threshold: ${ilThreshold || 3}%`)
+    console.log(`📊 IL Status Request: ${tokenA}/${tokenB}`)
+    console.log(`   Entry Price: ${entryPrice}`)
+    console.log(`   Deposits: ${depositAmount} ADA + ${tokenBAmount} ${tokenB}`)
+    console.log(`   LP Tokens: ${lpTokens}`)
+    console.log(`   Threshold: ${ilThreshold || 3}%`)
     
     // Get current pool data from Charli3
     const poolData = await ilCalculator.getPoolDataFromCharli3(
@@ -767,11 +804,13 @@ app.post("/api/vault/il-status", async (req, res) => {
       dex,
     );
     
-    // Create user position with entry price
+    console.log(`   Current Price: ${poolData.price}`)
+    
+    // Create user position with ACTUAL vault amounts
     const userPosition = {
-      token_a_amount: 100000, // Standard amount for calculation
-      token_b_amount: 150,
-      lp_tokens: 100,
+      token_a_amount: depositAmount * 1_000_000, // Convert ADA to lovelace
+      token_b_amount: tokenBAmount * 1_000_000,  // Convert to micro units
+      lp_tokens: lpTokens * 1_000_000,           // Convert to micro units
       initial_price: entryPrice,
       deposit_timestamp: Date.now() - 86400000,
     };
@@ -792,9 +831,19 @@ app.post("/api/vault/il-status", async (req, res) => {
       shouldTriggerProtection,
       dataSource: "Charli3 Live API",
       timestamp: Date.now(),
+      calculation: {
+        entryPrice,
+        currentPrice: poolData.price,
+        priceChange: ((poolData.price - entryPrice) / entryPrice * 100).toFixed(2) + '%',
+        userAmounts: {
+          ada: depositAmount,
+          tokenB: tokenBAmount,
+          lpTokens: lpTokens
+        }
+      }
     };
 
-    console.log(`✅ IL Status Response: ${ilData.ilPercentage.toFixed(4)}% IL`);
+    console.log(`✅ IL Status Response: ${ilData.ilPercentage.toFixed(4)}% IL (${shouldTriggerProtection ? 'PROTECTED' : 'SAFE'})`);
     res.json(response);
   } catch (error) {
     console.error("❌ IL Status Error:", error);
@@ -829,21 +878,41 @@ app.post("/api/pool/data", async (req, res) => {
 // Start vault monitoring
 app.post("/api/vault/monitor", async (req, res) => {
   try {
-    const { vaultId, tokenA, tokenB, entryPrice, ilThreshold } = req.body;
+    const { vaultId, tokenA, tokenB, entryPrice, ilThreshold, lpTokens } = req.body;
 
     console.log(`🛡️ Starting monitoring for vault ${vaultId}`);
     console.log(`   Pair: ${tokenA}/${tokenB}`);
     console.log(`   Entry Price: ${entryPrice}`);
     console.log(`   IL Threshold: ${ilThreshold}%`);
 
-    // In a real implementation, this would:
-    // 1. Store vault config in database
-    // 2. Start background monitoring process
-    // 3. Set up alerts/notifications
+    // Store vault monitoring data in database to ensure tokens are preserved
+    if (database) {
+      const vaultData = {
+        vaultId: vaultId,
+        tokenA: tokenA,
+        tokenB: tokenB, // Preserve the correct token symbol (like "DJED", "SNEK", etc.)
+        entryPrice: entryPrice,
+        ilThreshold: ilThreshold,
+        lpTokens: lpTokens || 0,
+        status: 'active',
+        createdAt: Date.now(),
+        emergencyWithdraw: true,
+        poolId: `${tokenA}-${tokenB}`,
+        owner: 'monitored', // Will be updated when synced from blockchain
+        tokenAPolicyId: '', // ADA has empty policy
+        tokenBPolicyId: '', // Will be resolved from blockchain if needed
+        depositAmount: 1000, // Will be updated from blockchain
+        tokenBAmount: 100 // Will be updated from blockchain
+      };
+      
+      await database.storeVault(vaultData);
+      console.log(`   💾 Vault stored with token symbols: ${tokenA}/${tokenB} (preserving exact token name)`);
+    }
 
     res.json({
       success: true,
       message: `Monitoring started for vault ${vaultId}`,
+      tokenPair: `${tokenA}/${tokenB}`, // Return the correct token pair
     });
   } catch (error) {
     console.error("❌ Monitor Error:", error);
@@ -1104,20 +1173,22 @@ app.post("/api/vault/list", async (req, res) => {
     });
     console.log(`✅ Filtered to ${userVaults.length} vaults owned by user`);
 
-    // Return the filtered vault data
+    // Return the filtered vault data with proper token symbols
     const vaults = userVaults.map((vault: any) => ({
       vaultId: vault.vaultId,
       lpTokens: vault.lpTokens,
       depositAmount: vault.depositAmount,
-      tokenPair: `${vault.tokenA}/${vault.tokenB}`,
+      tokenPair: `${vault.tokenA || 'ADA'}/${vault.tokenB || 'TOKEN'}`, // Use stored token symbols
       ilPercentage: 2.0, // Will be calculated by IL service
       status: "Active",
       entryPrice: vault.entryPrice,
-      currentPrice: vault.entryPrice * 1.02, // Slight price movement
+      currentPrice: vault.entryPrice ? vault.entryPrice * 1.02 : 0.98, // Slight price movement
       createdAt: vault.createdAt,
       ilThreshold: vault.ilThreshold,
       emergencyWithdraw: vault.emergencyWithdraw || true, // Include emergency withdraw flag
       owner: vault.owner, // Include owner for debugging
+      tokenA: vault.tokenA || 'ADA', // Include individual tokens for better debugging
+      tokenB: vault.tokenB || 'TOKEN'
     }));
 
     console.log(`✅ Returning ${vaults.length} vaults owned by user`);

@@ -193,7 +193,12 @@ export function RealDashboard() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Pool:</span>
-                    <span className="text-white">{vault.tokenA}/{vault.tokenB}</span>
+                    <span className="text-white">
+                      {vault.tokenA}/{vault.tokenB === 'TOKEN' ? 
+                        <span className="text-yellow-400">Loading...</span> : 
+                        vault.tokenB
+                      }
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Deposit:</span>

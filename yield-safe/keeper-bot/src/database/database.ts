@@ -3,6 +3,7 @@ import { logger } from "../utils/logger.js";
 export class DatabaseService {
   private dbPath: string;
   private isInitialized: boolean = false;
+  private vaults: Map<string, any> = new Map(); // In-memory storage for demo
 
   constructor(dbPath: string) {
     this.dbPath = dbPath;

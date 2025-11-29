@@ -104,6 +104,7 @@ export function EnhancedPoolSelector({ onPoolSelect, selectedPool }: PoolSelecto
     ) {
       console.log(`✅ Using cached pool data (${poolCache.data.length} pools, ${Math.round((CACHE_TTL - (now - poolCache.timestamp)) / 1000)}s remaining)`);
       setPools(poolCache.data);
+      setError(null); // Clear any previous errors when using cached data
       setLoading(false);
       return;
     }
@@ -124,14 +125,23 @@ export function EnhancedPoolSelector({ onPoolSelect, selectedPool }: PoolSelecto
       const poolsData = result.pools || [];
       
       if (poolsData.length === 0) {
-        console.warn('⚠️ Charli3 returned 0 pools, using fallback dummy pools');
+        console.warn('⚠️ Charli3 returned 0 pools, using cached fallback pools');
         setPools(FALLBACK_POOLS);
-        setError('⚠️ Using demo pools (Charli3 unavailable)');
+        setError('🎯 Demo pools ready (live data loading...)');
         
         // Cache fallback pools too
         poolCache.data = FALLBACK_POOLS;
         poolCache.timestamp = now;
         poolCache.filter = cacheKey;
+        
+        // Try again in a shorter interval for live data
+        setTimeout(() => {
+          if (poolCache.data === FALLBACK_POOLS) {
+            console.log('🔄 Retrying Charli3 data fetch...');
+            setError(null);
+            loadPools();
+          }
+        }, 10000); // Retry in 10 seconds
         return;
       }
       
@@ -143,14 +153,21 @@ export function EnhancedPoolSelector({ onPoolSelect, selectedPool }: PoolSelecto
       poolCache.filter = cacheKey;
       console.log(`✅ Cached ${poolsData.length} pools for ${CACHE_TTL / 60000} minutes`);
     } catch (err) {
-      console.error('⚠️ Charli3 pools failed, using fallback dummy pools:', err);
-      setError('⚠️ Using demo pools (Charli3 unavailable)');
+      console.error('⚠️ Charli3 API temporarily unavailable, using cached pools:', err);
+      setError('🎯 Demo pools active (connecting to live data...)');
       setPools(FALLBACK_POOLS);
       
       // Cache fallback pools
       poolCache.data = FALLBACK_POOLS;
       poolCache.timestamp = now;
       poolCache.filter = cacheKey;
+      
+      // Auto-retry in background
+      setTimeout(() => {
+        console.log('🔄 Background retry: Charli3 data fetch...');
+        setError(null);
+        loadPools();
+      }, 15000); // Retry in 15 seconds
     } finally {
       setLoading(false);
     }

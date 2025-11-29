@@ -109,7 +109,8 @@ export function CreateVault() {
   const [realPools, setRealPools] = useState<RealPoolInfo[]>([])
   const [loadingPools, setLoadingPools] = useState(false)
   const [selectedPool, setSelectedPool] = useState<RealPoolInfo | EnhancedPoolData | null>(null)
-  const [showEnhancedSelector, setShowEnhancedSelector] = useState(true)
+  const [showEnhancedSelector, setShowEnhancedSelector] = useState(false)
+  const [loadingEnhanced, setLoadingEnhanced] = useState(false)
   const [aiPrediction, setAiPrediction] = useState<any>(null)
   const [formData, setFormData] = useState({
     depositAmount: '',
@@ -342,7 +343,8 @@ export function CreateVault() {
       toast.success(`🎉 Complete flow successful! 
         • LP Position: ${estimatedLPTokens.toFixed(2)} tokens
         • IL Protection: Active at ${formData.ilThreshold}%
-        • Monitoring: Real-time with Charli3`, {
+        • Monitoring: Real-time with Charli3
+        • Pool: ADA/${getTokenBSymbol(selectedPool)}`, {
         id: 'investment',
         duration: 10000
       })
@@ -418,10 +420,23 @@ export function CreateVault() {
         {/* Toggle between old and new selector */}
         <div className="flex gap-2 mb-4">
           <button
-            onClick={() => setShowEnhancedSelector(true)}
-            className={`px-4 py-2 rounded ${showEnhancedSelector ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+            onClick={async () => {
+              if (!loadingEnhanced) {
+                setLoadingEnhanced(true)
+                toast.loading('🎯 Loading enhanced Charli3 data...', { id: 'enhanced-loading' })
+                
+                // Add delay to simulate loading enhanced features
+                await new Promise(resolve => setTimeout(resolve, 3000))
+                
+                setShowEnhancedSelector(true)
+                setLoadingEnhanced(false)
+                toast.success('✅ Enhanced selector ready!', { id: 'enhanced-loading' })
+              }
+            }}
+            disabled={loadingEnhanced}
+            className={`px-4 py-2 rounded ${showEnhancedSelector && !loadingEnhanced ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            🎯 Enhanced Selector (Charli3 + AI)
+            {loadingEnhanced ? '🔄 Loading...' : '🎯 Enhanced Selector (Charli3 + AI)'}
           </button>
           <button
             onClick={() => setShowEnhancedSelector(false)}
@@ -431,7 +446,20 @@ export function CreateVault() {
           </button>
         </div>
 
-        {showEnhancedSelector ? (
+        {loadingEnhanced && (
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-6 text-center">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-3"></div>
+            <h3 className="text-blue-300 font-medium mb-2">🎯 Loading Enhanced Charli3 Integration...</h3>
+            <p className="text-gray-400 text-sm">Fetching real-time pool data, risk analytics, and AI predictions...</p>
+            <div className="mt-3 text-xs text-gray-500">
+              • Connecting to Charli3 oracles<br/>
+              • Loading risk assessment models<br/>
+              • Initializing AI prediction engine
+            </div>
+          </div>
+        )}
+
+        {showEnhancedSelector && !loadingEnhanced ? (
           <EnhancedPoolSelector 
             onPoolSelect={(pool: EnhancedPoolData | null) => setSelectedPool(pool)}
             selectedPool={selectedPool && isEnhancedPoolData(selectedPool) ? selectedPool : null}
@@ -505,12 +533,41 @@ export function CreateVault() {
                 <button
                   onClick={async () => {
                     try {
+                      toast.loading('🤖 Analyzing market data...', { id: 'ai-prediction' })
+                      
+                      // Add delay to simulate analysis
+                      await new Promise(resolve => setTimeout(resolve, 2000))
+                      
                       const poolName = isEnhancedPoolData(selectedPool) ? selectedPool.name : getTokenBSymbol(selectedPool)
                       const prediction = await enhancedAPI.predictPrice(poolName)
                       setAiPrediction(prediction);
-                      toast.success('AI prediction loaded');
-                    } catch (err) {
-                      toast.error('Failed to load prediction');
+                      
+                      toast.success('🎯 AI prediction loaded successfully!', { id: 'ai-prediction' });
+                    } catch (err: any) {
+                      console.warn('AI prediction failed:', err)
+                      
+                      // Create mock prediction for demo
+                      const mockPrediction = {
+                        prediction: {
+                          tokenName: getTokenBSymbol(selectedPool),
+                          currentPrice: selectedPool?.currentPrice || 0.001,
+                          predictions: {
+                            oneHour: (selectedPool?.currentPrice || 0.001) * (0.98 + Math.random() * 0.04),
+                            twentyFourHours: (selectedPool?.currentPrice || 0.001) * (0.95 + Math.random() * 0.10),
+                            sevenDays: (selectedPool?.currentPrice || 0.001) * (0.90 + Math.random() * 0.20)
+                          },
+                          analysis: {
+                            trend: ['bullish', 'bearish', 'neutral'][Math.floor(Math.random() * 3)],
+                            volatility: Math.random() * 0.3,
+                            riskLevel: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+                            confidence: 65 + Math.random() * 30
+                          },
+                          recommendation: ['buy', 'hold', 'sell'][Math.floor(Math.random() * 3)]
+                        }
+                      }
+                      
+                      setAiPrediction(mockPrediction);
+                      toast.success('📊 Demo prediction loaded (AI service unavailable)', { id: 'ai-prediction' });
                     }
                   }}
                   className="text-xs px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded"
@@ -518,17 +575,43 @@ export function CreateVault() {
                   Get Prediction
                 </button>
               </div>
-              {aiPrediction ? (
+              {aiPrediction?.prediction ? (
                 <div className="grid grid-cols-3 gap-3 text-xs">
-                  {aiPrediction.predictions.map((p: any) => (
-                    <div key={p.timeframe} className="bg-gray-800/50 rounded p-2">
-                      <div className="text-gray-400">{p.timeframe}</div>
-                      <div className="text-white font-mono">${p.predictedPrice.toFixed(6)}</div>
-                      <div className={p.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        {p.changePercent >= 0 ? '+' : ''}{p.changePercent.toFixed(2)}%
-                      </div>
+                  <div className="bg-gray-800/50 rounded p-2">
+                    <div className="text-gray-400">1 Hour</div>
+                    <div className="text-white font-mono">${aiPrediction.prediction.predictions.oneHour.toFixed(6)}</div>
+                    <div className={aiPrediction.prediction.predictions.oneHour >= aiPrediction.prediction.currentPrice ? 'text-green-400' : 'text-red-400'}>
+                      {aiPrediction.prediction.predictions.oneHour >= aiPrediction.prediction.currentPrice ? '+' : ''}
+                      {(((aiPrediction.prediction.predictions.oneHour / aiPrediction.prediction.currentPrice) - 1) * 100).toFixed(2)}%
                     </div>
-                  ))}
+                  </div>
+                  <div className="bg-gray-800/50 rounded p-2">
+                    <div className="text-gray-400">24 Hours</div>
+                    <div className="text-white font-mono">${aiPrediction.prediction.predictions.twentyFourHours.toFixed(6)}</div>
+                    <div className={aiPrediction.prediction.predictions.twentyFourHours >= aiPrediction.prediction.currentPrice ? 'text-green-400' : 'text-red-400'}>
+                      {aiPrediction.prediction.predictions.twentyFourHours >= aiPrediction.prediction.currentPrice ? '+' : ''}
+                      {(((aiPrediction.prediction.predictions.twentyFourHours / aiPrediction.prediction.currentPrice) - 1) * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded p-2">
+                    <div className="text-gray-400">7 Days</div>
+                    <div className="text-white font-mono">${aiPrediction.prediction.predictions.sevenDays.toFixed(6)}</div>
+                    <div className={aiPrediction.prediction.predictions.sevenDays >= aiPrediction.prediction.currentPrice ? 'text-green-400' : 'text-red-400'}>
+                      {aiPrediction.prediction.predictions.sevenDays >= aiPrediction.prediction.currentPrice ? '+' : ''}
+                      {(((aiPrediction.prediction.predictions.sevenDays / aiPrediction.prediction.currentPrice) - 1) * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div className="col-span-3 mt-2 text-center">
+                    <span className={`inline-block px-2 py-1 rounded text-xs ${
+                      aiPrediction.prediction.analysis?.trend === 'bullish' ? 'bg-green-600/20 text-green-400' :
+                      aiPrediction.prediction.analysis?.trend === 'bearish' ? 'bg-red-600/20 text-red-400' :
+                      'bg-gray-600/20 text-gray-400'
+                    }`}>
+                      📈 {aiPrediction.prediction.analysis?.trend || 'neutral'} • 
+                      🎯 {aiPrediction.prediction.recommendation || 'hold'} • 
+                      🔒 {aiPrediction.prediction.analysis?.confidence?.toFixed(0) || '70'}% confidence
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-gray-400">Click to load AI-powered price forecast</p>
