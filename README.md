@@ -166,17 +166,17 @@ yield-safe/
 
 ## 🚀 Development Phases
 
-### Phase 1: Smart Contracts (Days 1-2)
+### Phase 1: Smart Contracts
 - Vault contract for storing funds and IL policies
 - IL policy enforcement logic
 - Deposit/withdrawal mechanisms
 
-### Phase 2: Keeper Bot (Days 2-3)  
+### Phase 2: Keeper Bot 
 - Pool data monitoring from Minswap
 - IL calculation engine
 - Automated policy enforcement
 
-### Phase 3: Frontend (Days 3-4)
+### Phase 3: Frontend 
 - User dashboard for vault management
 - Real-time IL monitoring
 - Wallet integration
