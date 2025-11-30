@@ -1,5 +1,12 @@
 # Yield Safe - Impermanent Loss Protection Protocol
 
+## 🚀 Quick Summary
+- **Yield Safe** protects Cardano liquidity providers from impermanent loss using smart contracts and AI agents.
+- **Frontend**: React dashboard for vault management and real-time monitoring.
+- **Backend**: Keeper bot automates monitoring and enforcement.
+- **Masumi Agents**: AI modules for rebalancing, policy enforcement, and safety automation (Track 2 focus).
+- **How to run**: Install dependencies, set up `.env` with API keys, run frontend and backend, or use Docker Compose.
+
 ## 🎯 Project Overview
 
 **Yield Safe** is a DeFi protocol on Cardano that protects liquidity providers from impermanent loss (IL) by automatically monitoring pool positions and enforcing user-defined IL limits through smart contracts.
@@ -37,8 +44,70 @@
     │  • Pool reserves       │
     │  • LP token prices     │
     │  • Historical data     │
+    └──────┬─────────────────┘
+           │ AI jobs & analytics
+    ┌──────▼─────────────────┐
+    │  Masumi Agents         │ (AI-powered jobs)
+    │  • Rebalancing         │
+    │  • IL Policy Enforcement│
+    │  • Emergency Exit      │
+    │  • Decision Verification│
+    │  • Reporting           │
     └────────────────────────┘
 ```
+
+## ⚡️ How to Run (Local Development)
+
+### 1. Prerequisites
+- Node.js v18+
+- npm
+- Cardano testnet wallet (for frontend)
+- API keys (see below)
+
+### 2. Environment Variables
+Create a file named `.env` in the `yield-safe/` directory (root of the repo):
+
+```env
+BLOCKFROST_API_KEY=your_blockfrost_key_here
+OPENAI_API_KEY=your_openai_key_here
+NODE_ENV=development
+```
+
+- `BLOCKFROST_API_KEY`: Required for Cardano blockchain queries (keeper-bot)
+- `OPENAI_API_KEY`: Required for AI features (keeper-bot)
+- `NODE_ENV`: Set to `development` or `production`
+
+### 3. Run the Frontend
+
+```bash
+cd yield-safe/frontend
+npm install
+npm run dev
+# Visit http://localhost:5173
+```
+
+### 4. Run the Keeper Bot (Backend)
+
+```bash
+cd yield-safe/keeper-bot
+npm install
+npm run dev
+```
+
+- The keeper bot will use the API keys from the `.env` file in the root directory.
+- By default, it runs on port 3001.
+
+### 5. Docker Compose (Optional)
+
+To run both services together:
+
+```bash
+cd yield-safe
+docker compose up --build
+```
+
+- Frontend: http://localhost:3000
+- Keeper Bot API: http://localhost:3001
 
 ## 🔧 Technology Stack
 
@@ -117,65 +186,12 @@ yield-safe/
 4. **Multi-Pool Support**: Works with any Minswap V2 liquidity pool
 5. **Transparent Calculations**: Open-source IL calculation methodology
 
-## 🎯 Success Metrics
+## � Success Metrics
 
 - Deploy functional smart contracts on Cardano testnet
 - Monitor at least 3 active vault positions
 - Calculate IL with <1% accuracy deviation
 - Complete end-to-end demo: deposit → monitor → withdraw
-
-## ⚡️ How to Run (Local Development)
-
-### 1. Prerequisites
-- Node.js v18+
-- npm
-- Cardano testnet wallet (for frontend)
-- API keys (see below)
-
-### 2. Environment Variables
-Create a file named `.env` in the `yield-safe/` directory (root of the repo):
-
-```env
-BLOCKFROST_API_KEY=your_blockfrost_key_here
-OPENAI_API_KEY=your_openai_key_here
-NODE_ENV=development
-```
-
-- `BLOCKFROST_API_KEY`: Required for Cardano blockchain queries (keeper-bot)
-- `OPENAI_API_KEY`: Required for AI features (keeper-bot)
-- `NODE_ENV`: Set to `development` or `production`
-
-### 3. Run the Frontend
-
-```bash
-cd yield-safe/frontend
-npm install
-npm run dev
-# Visit http://localhost:5173
-```
-
-### 4. Run the Keeper Bot (Backend)
-
-```bash
-cd yield-safe/keeper-bot
-npm install
-npm run dev
-```
-
-- The keeper bot will use the API keys from the `.env` file in the root directory.
-- By default, it runs on port 3001.
-
-### 5. Docker Compose (Optional)
-
-To run both services together:
-
-```bash
-cd yield-safe
-docker compose up --build
-```
-
-- Frontend: http://localhost:3000
-- Keeper Bot API: http://localhost:3001
 
 ## 🔑 API Keys & Configuration
 
@@ -284,6 +300,16 @@ docker compose up --build
 - See `docs/api-specs.md` for API details
 - See `docs/deployment.md` for deployment options
 
+## � Project Status: Track 2 - Masumi Agent Integration
+
+Yield Safe is currently in **Track 2**, focusing on integrating and operationalizing Masumi agents:
+
+- Implementing AI-powered jobs for rebalancing, IL enforcement, emergency exits, and decision verification
+- Connecting Masumi agent analytics to the keeper bot and frontend dashboard
+- Testing and refining agent-driven automation and reporting
+
+This phase builds on the smart contract foundation and sets up advanced, AI-driven safety and automation for Cardano DeFi users.
+
 ## 🤖 Masumi Agents Integration
 
 **Masumi agents** are AI-powered modules integrated into the Yield Safe protocol to enhance decision-making and risk management. Here’s how they are used:
@@ -295,8 +321,28 @@ docker compose up --build
 
 Masumi agents combine on-chain data, off-chain analytics, and AI models to provide smarter, safer DeFi automation for Cardano liquidity providers.
 
+## 🧩 Masumi Agent Jobs
+
+Masumi agents operate through a set of specialized jobs that automate and enhance protocol safety:
+
+- **Rebalancing Job**: Periodically analyzes pool data and vault positions, then recommends or executes rebalancing actions to optimize yield and reduce impermanent loss.
+- **IL Policy Enforcement Job**: Monitors all vaults for IL threshold breaches and triggers smart contract enforcement (e.g., restricts withdrawals, sends alerts).
+- **Emergency Exit Job**: Detects critical risk scenarios and simulates emergency exit actions, providing recommendations or automated responses to protect user funds.
+- **AI Decision Verification Job**: Before any automated action, simulates and verifies the outcome using AI models to ensure safety and compliance with user policies.
+- **Reporting Job**: Aggregates vault and pool data, generates analytics, and updates the frontend dashboard with actionable insights.
+
+Each job runs on a schedule (e.g., every 60 seconds) and is coordinated by the keeper bot, with results surfaced to users via the dashboard and notification system.
+
 ## 🆘 Need Help?
 - Check `.env` file for correct API keys
 - Review logs for errors
 - See documentation in `docs/`
 - Open an issue on GitHub for support
+
+## 📝 Key Takeaways
+- Yield Safe is a Cardano DeFi protocol focused on impermanent loss protection.
+- Smart contracts enforce user-defined IL policies.
+- Keeper bot and Masumi agents automate monitoring and safety actions.
+- Project is currently in Track 2: AI agent integration and automation.
+- Easy setup: clone, configure `.env`, install, and run.
+- See docs for architecture, API, and deployment details.
