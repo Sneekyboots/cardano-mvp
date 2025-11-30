@@ -76,11 +76,13 @@ Create a file named `.env` in the `yield-safe/` directory (root of the repo):
 ```env
 BLOCKFROST_API_KEY=your_blockfrost_key_here
 OPENAI_API_KEY=your_openai_key_here
+CHARLIE3_API_KEY=your_charlie3_key_here
 NODE_ENV=development
 ```
 
-- `BLOCKFROST_API_KEY`: Required for Cardano blockchain queries (keeper-bot)
-- `OPENAI_API_KEY`: Required for AI features (keeper-bot)
+- `BLOCKFROST_API_KEY`: For Cardano blockchain queries (keeper-bot)
+- `OPENAI_API_KEY`: For AI features and Masumi agents (keeper-bot)
+- `CHARLIE3_API_KEY`: For accessing Charlie3 oracle price feeds (keeper-bot)
 - `NODE_ENV`: Set to `development` or `production`
 
 ### 3. Run the Frontend
@@ -232,11 +234,13 @@ Create a `.env` file in the `yield-safe/` directory:
 ```env
 BLOCKFROST_API_KEY=your_blockfrost_key_here
 OPENAI_API_KEY=your_openai_key_here
+CHARLIE3_API_KEY=your_charlie3_key_here
 NODE_ENV=development
 ```
 
 - Get your Blockfrost key from [blockfrost.io](https://blockfrost.io/)
 - Get your OpenAI key from [platform.openai.com](https://platform.openai.com/)
+- Get your Charlie3 oracle key from the Charlie3 documentation or website.
 
 ### 4. Install Dependencies
 
