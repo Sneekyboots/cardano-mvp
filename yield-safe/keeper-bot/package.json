@@ -10,6 +10,9 @@
     "dev": "tsx src/index.ts",
     "monitor": "tsx src/realILMonitoring.ts",
     "test": "jest",
+    "test:midnight-zk": "tsx src/test-midnight-zk.ts",
+    "test:ai-decision": "tsx src/test-ai-decision-execution.ts",
+    "test:all": "tsx src/test-midnight-zk.ts && tsx src/test-ai-decision-execution.ts",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src/**/*.ts"
   },
@@ -29,6 +32,8 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "openai": "^6.9.1",
+    "pino": "^8.18.0",
+    "pino-pretty": "^10.3.1",
     "sqlite3": "^5.1.6",
     "uuid": "^13.0.0",
     "winston": "^3.11.0"

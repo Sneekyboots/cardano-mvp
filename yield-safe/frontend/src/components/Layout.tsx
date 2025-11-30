@@ -81,16 +81,7 @@ export function Layout({ children }: LayoutProps) {
                    >
                      🧠 AI Demo
                    </Link>
-                   <Link
-                     to="/midnight"
-                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                       isActive('/midnight')
-                         ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                         : 'text-gray-300 hover:text-white hover:bg-purple-700'
-                     }`}
-                   >
-                     🌙 Midnight
-                   </Link>
+                   
                 </div>
               </div>
             </div>

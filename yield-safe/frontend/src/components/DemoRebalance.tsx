@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useWallet } from '../providers/WalletProvider'
+import { YieldSafeAPI } from '../lib/yieldSafeAPI'
 
 interface DemoRebalanceProps {
   isOpen: boolean
@@ -123,17 +124,53 @@ export function DemoRebalance({ isOpen, onClose }: DemoRebalanceProps) {
   const fetchRealVaults = async () => {
     setLoadingVaults(true)
     try {
+      // Use same API as VaultManagement for realistic IL calculation
+      const api = new YieldSafeAPI()
+      
       const response = await fetch('http://localhost:3001/api/vault/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: address || 'test-user' })
+        body: JSON.stringify({ userAddress: address || 'test-user' })
       })
       
       if (response.ok) {
         const data = await response.json()
-        setRealVaults(data.vaults || [])
-        addNotification(`✅ Loaded ${data.vaults?.length || 0} real vaults`)
-        toast.success(`Loaded ${data.vaults?.length || 0} real vaults`)
+        
+        // Transform vaults with live IL data using YieldSafeAPI (same as VaultManagement)
+        const enhancedVaults = await Promise.all(
+          (data.vaults || []).map(async (vault: any) => {
+            try {
+              // Get realistic IL using same method as VaultManagement
+              const ilData = await api.getVaultILData(
+                vault.tokenA || 'ADA',
+                vault.tokenB || 'TOKEN',
+                vault.entryPrice || 1.0,
+                vault.ilThreshold || 10,
+                vault.depositAmount || 1000,
+                (vault.depositAmount || 1000) / (vault.entryPrice || 1.0),
+                vault.lpTokens || 100
+              )
+              
+              return {
+                ...vault,
+                ilPercentage: ilData.ilPercentage, // Real IL calculation
+                currentPrice: ilData.currentPrice,
+                status: ilData.shouldTriggerProtection ? 'Protected' : 
+                        ilData.ilPercentage > (vault.ilThreshold || 10) * 0.8 ? 'Warning' : 'Healthy'
+              }
+            } catch (err) {
+              console.warn(`Failed to calculate IL for vault:`, err)
+              return vault // Return unchanged if calculation fails
+            }
+          })
+        )
+        
+        setRealVaults(enhancedVaults)
+        addNotification(`✅ Loaded ${enhancedVaults.length} real vaults with live IL data`)
+        toast.success(`Loaded ${enhancedVaults.length} real vaults`)
+      } else {
+        console.warn('Backend response:', response.status)
+        addNotification('⚠️ No vaults found for this address')
       }
     } catch (error) {
       console.error('Error fetching vaults:', error)
@@ -318,7 +355,6 @@ export function DemoRebalance({ isOpen, onClose }: DemoRebalanceProps) {
                       <span className="text-gray-400">Current Position:</span>
                       <span className="text-white font-mono">
                         {scenario.vaultState.currentPool}
-                        <span className="text-red-400 ml-2">IL: {scenario.vaultState.currentIL}%</span>
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -459,11 +495,11 @@ export function DemoRebalance({ isOpen, onClose }: DemoRebalanceProps) {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {realVaults.map((vault: any) => (
-                  <div key={vault.id} className="bg-gray-800/70 border border-gray-600 rounded-lg p-4 hover:border-gray-500 transition-colors">
+                  <div key={vault.vaultId || vault.id} className="bg-gray-800/70 border border-gray-600 rounded-lg p-4 hover:border-gray-500 transition-colors">
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h4 className="font-semibold text-white">{vault.tokenA}/{vault.tokenB}</h4>
-                        <p className="text-xs text-gray-400">{vault.poolId}</p>
+                        <p className="text-xs text-gray-400">{vault.vaultId}</p>
                       </div>
                       <div className={`text-xs px-2 py-1 rounded font-medium ${
                         vault.ilPercentage > vault.ilThreshold ? 'bg-red-500/20 text-red-300' :
@@ -476,15 +512,25 @@ export function DemoRebalance({ isOpen, onClose }: DemoRebalanceProps) {
                     <div className="space-y-1 text-sm text-gray-300">
                       <div className="flex justify-between">
                         <span className="text-gray-400">Deposit:</span>
-                        <span>${vault.depositAmount?.toLocaleString()}</span>
+                        <span className="font-mono">${vault.depositAmount?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Current Value:</span>
-                        <span>${vault.currentValue?.toLocaleString()}</span>
+                        <span className="text-gray-400">Current Price:</span>
+                        <span className="font-mono text-xs">{vault.currentPrice?.toFixed(6) || '—'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">Entry Price:</span>
-                        <span className="font-mono text-xs">{vault.entryPrice?.toFixed(6)}</span>
+                        <span className="font-mono text-xs">{vault.entryPrice?.toFixed(6) || '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs mt-2 pt-2 border-t border-gray-700">
+                        <span className="text-gray-500">Status:</span>
+                        <span className={`font-semibold ${
+                          vault.status === 'Protected' ? 'text-red-400' :
+                          vault.status === 'Warning' ? 'text-yellow-400' :
+                          'text-green-400'
+                        }`}>
+                          {vault.status}
+                        </span>
                       </div>
                     </div>
                   </div>
