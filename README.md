@@ -45,6 +45,12 @@
     │  • LP token prices     │
     │  • Historical data     │
     └──────┬─────────────────┘
+           │ Oracle price feeds
+    ┌──────▼─────────────────┐
+    │  Charlie3 Oracle       │ (On-chain Oracle)
+    │  • Asset price feeds   │
+    │  • Reliable market data│
+    └──────┬─────────────────┘
            │ AI jobs & analytics
     ┌──────▼─────────────────┐
     │  Masumi Agents         │ (AI-powered jobs)
@@ -116,6 +122,7 @@ docker compose up --build
 - **Frontend**: React + Vite + Lucid-Cardano
 - **Database**: SQLite (keeper bot data)
 - **Monitoring**: Custom IL calculation engine
+- **Oracles**: Charlie3 (on-chain price feeds)
 - **Testing**: Cardano testnet (preprod)
 
 ## 📁 Project Structure
