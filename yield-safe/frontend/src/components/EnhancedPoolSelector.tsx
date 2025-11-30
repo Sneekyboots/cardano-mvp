@@ -125,25 +125,23 @@ export function EnhancedPoolSelector({ onPoolSelect, selectedPool }: PoolSelecto
       const poolsData = result.pools || [];
       
       if (poolsData.length === 0) {
-        console.warn('⚠️ Charli3 returned 0 pools, using cached fallback pools');
-        setPools(FALLBACK_POOLS);
-        setError('🎯 Demo pools ready (live data loading...)');
-        
-        // Cache fallback pools too
-        poolCache.data = FALLBACK_POOLS;
-        poolCache.timestamp = now;
-        poolCache.filter = cacheKey;
-        
-        // Try again in a shorter interval for live data
-        setTimeout(() => {
-          if (poolCache.data === FALLBACK_POOLS) {
-            console.log('🔄 Retrying Charli3 data fetch...');
-            setError(null);
-            loadPools();
-          }
-        }, 10000); // Retry in 10 seconds
-        return;
-      }
+  console.warn('⚠️ Charli3 returned 0 pools, using cached fallback pools');
+  setPools(FALLBACK_POOLS);
+
+  // Cache fallback pools too
+  poolCache.data = FALLBACK_POOLS;
+  poolCache.timestamp = now;
+  poolCache.filter = cacheKey;
+
+  // Retry silently in a shorter interval for live data
+  setTimeout(() => {
+    if (poolCache.data === FALLBACK_POOLS) {
+      console.log('🔄 Retrying Charli3 data fetch...');
+      loadPools(); // Retry without setting an error
+    }
+  }, 10000); // Retry in 10 seconds
+  return;
+}
       
       setPools(poolsData);
       
